@@ -15,5 +15,6 @@ export function getGeoDistance(src: Airport, dst: Airport): number {
       Math.pow(Math.sin((lon2 - lon1) / 2), 2);
 
   // 6371 is the radius of the Earth in kilometers
-  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  // cast to integer to consume less memory
+  return Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
