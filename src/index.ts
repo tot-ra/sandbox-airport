@@ -27,7 +27,10 @@ server.get("/route", async (request: any, reply: any) => {
   };
 });
 
-server.listen(8080, (err, address) => {
+server.listen({
+  host: 'localhost',
+  port: 8080
+}, (err, address) => {
   if (err) {
     console.error(err)
     process.exit(1)
