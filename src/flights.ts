@@ -1,7 +1,6 @@
 import { getGeoDistance } from "./geo";
 import { Airport } from "./airports";
 
-
 export type Flight = {
   from: string;
   to: string;
