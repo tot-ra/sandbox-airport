@@ -1,13 +1,26 @@
 import fastify, { FastifyRequest } from 'fastify'
-import { getShortestRoute } from './getShortestRoute';
+import { getAirport } from './airports';
+import { getShortestRoute } from './route';
 
 const server = fastify({logger: true})
 
-server.get("/route", async (request: any) => {
+server.get("/route", async (request: any, reply: any) => {
   const from = request.query["from"] as string;
   const to = request.query["to"] as string;
 
-  const route = getShortestRoute(from, to);
+  const originAirport = getAirport(from);
+
+  if(!originAirport){
+    return reply.status(400).send({ ok: false, error: "Invalid IATA code for source airport (from)" })
+  }
+
+  const destinationAirport = getAirport(to);
+
+  if(!destinationAirport){
+    return reply.status(400).send({ ok: false, error: "Invalid IATA code for target airport (to)" })
+  }
+  
+  const route = getShortestRoute(originAirport, destinationAirport);
 
   return {
     route

@@ -1,5 +1,8 @@
 # airport-sandbox
 
+## Usage
+http://localhost:8080/route?from=TLL&to=YCY
+
 ## Requirements
 The task is to build a JSON over HTTP API endpoint that takes as input two IATA/ICAO airport codes and provides as output a route between these two airports so that:
 
