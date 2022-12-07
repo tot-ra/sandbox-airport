@@ -1,28 +1,37 @@
 import fastify, { FastifyRequest } from 'fastify'
 import { getAirport } from './airports';
-import { getShortestRoute } from './route';
+import AirportGraph from './route';
 
+const graph = new AirportGraph();
+graph.initialize();
 
 const server = fastify({logger: true})
 
 server.get("/route", async (request: any, reply: any) => {
+  // source
   const from = request.query["from"] as string;
-  const to = request.query["to"] as string;
-
   const originAirport = getAirport(from);
 
   if(!originAirport){
     return reply.status(400).send({ ok: false, error: "Invalid IATA code for source airport (from)" })
   }
 
+  // destination
+  const to = request.query["to"] as string;
   const destinationAirport = getAirport(to);
 
   if(!destinationAirport){
     return reply.status(400).send({ ok: false, error: "Invalid IATA code for target airport (to)" })
   }
-  
-  const route = getShortestRoute(originAirport, destinationAirport);
-  //const totalDistance = route.reduce((partialSum, flight) => partialSum + flight.distance, 0)
+
+  //default 100 ms, min 10ms, max 10 sec, 
+  const timeout = request.query["timeout"] as string;
+  let timeoutMs = timeout ? Math.min(parseInt(timeout, 10), 10000) : 100;
+  timeoutMs = Math.max(timeoutMs, 10);
+
+
+  console.log({timeoutMs});
+  const route = graph.search(originAirport, destinationAirport, timeoutMs);
 
   return {
     route,

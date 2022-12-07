@@ -1,9 +1,19 @@
 import { getAirport } from "./airports";
-import { getShortestRoute } from "./route";
+import AirportGraph from "./route";
 
 describe("getShortestRoute", () => {
-  it("calculates shortest route from TLL -> JFK", () => {
-    const route = getShortestRoute(getAirport("TLL"), getAirport("JFK"));
+  const graph = new AirportGraph();
+  graph.initialize();
+
+  it("calculates shortest route within 10ms from TLL -> JFK", () => {
+    const route = graph.search(getAirport("TLL"), getAirport("JFK"), 10);
+
+    expect(route?.path).toEqual(["TLL", "ARN", "JFK"])
+    expect(route?.distance).toEqual(6683);
+  });
+
+  it("calculates shortest route within 1 sec from TLL -> JFK", () => {
+    const route = graph.search(getAirport("TLL"), getAirport("JFK"), 1000);
 
     expect(route?.path).toEqual(["TLL", "TRD", "KEF", "JFK"])
     expect(route?.distance).toEqual(6659);

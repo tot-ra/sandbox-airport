@@ -3,7 +3,7 @@ import { getGeoDistance } from "./geo";
 import routes from "./routes";
 
 type KM = number;
-class AirportGraph {
+export default class AirportGraph {
   // Create an object to store a mapping of airport names to sets of neighboring airports
   private airports: { [airport: IATA]: Map<IATA, KM> } = {};
 
@@ -12,6 +12,23 @@ class AirportGraph {
     // If the airport does not yet exist in the graph, add it
     if (!this.airports[airport]) {
       this.airports[airport] = new Map<IATA, KM>();
+    }
+  }
+
+  public initialize() {
+    console.log("Loading routes into memory...");
+    for (const [srcIATA, dstIATA] of routes) {
+      if (srcIATA === dstIATA) {
+        continue;
+      }
+
+      const src = getAirport(srcIATA);
+      const dst = getAirport(dstIATA);
+      if (!src || !dst) {
+        continue;
+      }
+
+      this.addRoute(srcIATA, dstIATA, getGeoDistance(src, dst));
     }
   }
 
@@ -25,7 +42,7 @@ class AirportGraph {
     this.airports[source].set(destination, distance);
   }
 
-  public search(source: Airport, destination: Airport) {
+  public search(source: Airport, destination: Airport, maxTimeSec = 100) {
     // Create a map to store the distances from the source to each airport
     const distances = new Map<Airport, KM>();
 
@@ -49,10 +66,8 @@ class AirportGraph {
       },
     ];
 
-    const startTime = Date.now();
+    const startTimeStamp = Date.now();
     const results = [];
-
-    //const maxReasonableDistance = 2 * getGeoDistance(source, destination);
 
     let srcVisited: IATA[] = [];
     let dstVisited: IATA[] = [];
@@ -60,7 +75,7 @@ class AirportGraph {
     let srcMinPathTo: Map<IATA, { distance: KM; path: IATA[] }> = new Map();
     let dstMinPathTo: Map<IATA, { distance: KM; path: IATA[] }> = new Map();
 
-    while (srcQueue.length > 0 && Date.now() < startTime + 1000) {
+    while (srcQueue.length > 0 && Date.now() < startTimeStamp + maxTimeSec) {
       // Get the current airport from each queue
       const srcItem = srcQueue.shift();
       const dstItem = dstQueue.shift();
@@ -132,8 +147,9 @@ class AirportGraph {
 
           // two-way search connected
           if (dstVisited.includes(target) && dstMinPathTo.get(target)) {
+            const resultDistance =
             // @ts-ignore
-            const resultDistance = totalDistance + dstMinPathTo.get(target).distance;
+              totalDistance + dstMinPathTo.get(target).distance;
 
             results.push({
               path: [
@@ -208,8 +224,9 @@ class AirportGraph {
 
           // two-way search connected
           if (srcVisited.includes(target) && srcMinPathTo.get(target)) {
+            const resultDistance =
             // @ts-ignore
-            const resultDistance = totalDistance + srcMinPathTo.get(target).distance;
+              totalDistance + srcMinPathTo.get(target).distance;
 
             results.push({
               path: [
@@ -233,6 +250,7 @@ class AirportGraph {
       }
     }
 
+    // find fastest among results
     let lowestDistance = Number.MAX_VALUE;
     let lowestDistanceObject = null;
 
@@ -254,26 +272,3 @@ class AirportGraph {
     }
   }
 }
-
-const graph = new AirportGraph();
-
-console.log("Loading routes into memory...");
-for (const [srcIATA, dstIATA] of routes) {
-  if (srcIATA === dstIATA) {
-    continue;
-  }
-
-  const src = getAirport(srcIATA);
-  const dst = getAirport(dstIATA);
-  if (!src || !dst) {
-    continue;
-  }
-
-  graph.addRoute(srcIATA, dstIATA, getGeoDistance(src, dst));
-}
-
-export function getShortestRoute(source: Airport, target: Airport) {
-  return graph.search(source, target);
-}
-
-// Define a class to represent a graph of airports and routes
