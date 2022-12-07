@@ -13,7 +13,7 @@ describe("getShortestRoute", () => {
   });
 
   it("calculates shortest route within 1 sec from TLL -> JFK", () => {
-    const route = graph.search(getAirport("TLL"), getAirport("JFK"), 1000);
+    const route = graph.search(getAirport("TLL"), getAirport("JFK"), 500);
 
     expect(route?.path).toEqual(["TLL", "TRD", "KEF", "JFK"])
     expect(route?.distance).toEqual(6659);

@@ -1,0 +1,16 @@
+version: '3'
+services:
+  airport-sandbox:
+    image: node:16-alpine
+    command: node /app/build/index.js
+    ports:
+      - 8080:8080
+    volumes:
+      - .:/app/
+    restart: always
+    networks:
+      airport-sandbox:
+        aliases:
+          - 'airport-sandbox'
+networks:
+  airport-sandbox:

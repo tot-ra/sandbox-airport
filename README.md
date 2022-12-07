@@ -1,7 +1,10 @@
 # airport-sandbox
 
 ## Usage
-http://localhost:8080/route?from=TLL&to=YCY
+```sh
+docker compose up
+open http://localhost:8080/route?from=TLL&to=JFK&timeout=10
+```
 
 ## Requirements
 The task is to build a JSON over HTTP API endpoint that takes as input two IATA/ICAO airport codes and provides as output a route between these two airports so that:

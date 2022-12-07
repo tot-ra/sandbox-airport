@@ -40,7 +40,7 @@ server.get("/route", async (request: any, reply: any) => {
 });
 
 server.listen({
-  host: 'localhost',
+  host: '0.0.0.0',
   port: 8080
 }, (err, address) => {
   if (err) {
