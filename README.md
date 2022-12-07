@@ -5,7 +5,8 @@ Uses two-way graph breadth-first algorithm without recursion.
 ## Usage
 ```sh
 nvm use
-npm i
+npm install
+npm run build
 docker compose up
 open http://localhost:8080/route?from=TLL&to=JFK
 ```
