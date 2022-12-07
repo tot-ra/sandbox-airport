@@ -1,82 +1,279 @@
-// @ts-ignore
-import airports from "airport-data";
-
-import { getAirport, filterAirports, Airport } from "./airports";
-import { computeFlights, Flight } from "./flights";
+import { getAirport, Airport, IATA } from "./airports";
 import { getGeoDistance } from "./geo";
+import routes from "./routes";
 
-export function getShortestRoute(originAirport: Airport, destinationAirport: Airport): Flight[] {
-  // narrow down search space to only airports that are within radiuses of both airports
-  const reasonableAirports = filterAirports(
-    originAirport,
-    destinationAirport,
-    airports
-  );
+type KM = number;
+class AirportGraph {
+  // Create an object to store a mapping of airport names to sets of neighboring airports
+  private airports: { [airport: IATA]: Map<IATA, KM> } = {};
 
-  return search(
-    originAirport,
-    destinationAirport,
-    reasonableAirports
-  );
-}
-
-function search(source: Airport, target: Airport, airports: Airport[]): Flight[] {
-  // breath search from both directions
-  const sourceFlights = computeFlights(source, airports);
-  const targetFlights = computeFlights(target, airports);
-  let results: Flight[] = [];
-
-  // minimization
-  let minDistance = Infinity;
-
-  for (const flight1 of sourceFlights) {
-    // skip direct A->B flights
-    if (flight1.to === target.icao) {
-      continue;
-    }
-
-    // 1-hop flight, should be transitive so source -> target is the same as target -> source
-    const distance =
-      flight1.distance + getGeoDistance(getAirport(flight1.to), target);
-
-    if (distance < minDistance) {
-      minDistance = distance;
-      results = [
-        flight1,
-        {
-          from: flight1.to,
-          to: target.icao,
-          distance,
-        },
-      ];
-    }
-
-    for (const flight2 of targetFlights) {
-      if (flight1.to === flight2.to) {
-        continue;
-      }
-
-      // 2-hop flight
-      const thirdFlightDistance = getGeoDistance(
-        getAirport(flight1.to),
-        getAirport(flight2.to)
-      );
-      const distance =
-        flight1.distance + flight2.distance + thirdFlightDistance;
-      if (distance < minDistance) {
-        minDistance = distance;
-        results = [
-          flight1,
-          {
-            from: flight1.to,
-            to: flight2.to,
-            distance: thirdFlightDistance,
-          },
-          flight2,
-        ];
-      }
+  // Define a method to add an airport to the graph
+  private addAirport(airport: IATA) {
+    // If the airport does not yet exist in the graph, add it
+    if (!this.airports[airport]) {
+      this.airports[airport] = new Map<IATA, KM>();
     }
   }
 
-  return results;
+  // Define a method to add a route between two airports with a given distance
+  public addRoute(source: IATA, destination: IATA, distance: KM) {
+    // Add the source and destination airports to the graph if they do not yet exist
+    this.addAirport(source);
+    this.addAirport(destination);
+
+    // Add the destination airport to the set of neighbors for the source airport with the given distance
+    this.airports[source].set(destination, distance);
+  }
+
+  public search(source: Airport, destination: Airport) {
+    // Create a map to store the distances from the source to each airport
+    const distances = new Map<Airport, KM>();
+
+    // Initialize the distances from the source to itself and to the destination
+    distances.set(source, 0);
+
+    // what to go through
+    const srcQueue = [
+      {
+        last: source.iata,
+        path: [source.iata],
+        distance: 0,
+      },
+    ];
+
+    const dstQueue = [
+      {
+        last: destination.iata,
+        path: [destination.iata],
+        distance: 0,
+      },
+    ];
+
+    const startTime = Date.now();
+    const results = [];
+
+    //const maxReasonableDistance = 2 * getGeoDistance(source, destination);
+
+    let srcVisited: IATA[] = [];
+    let dstVisited: IATA[] = [];
+
+    let srcMinPathTo: Map<IATA, { distance: KM; path: IATA[] }> = new Map();
+    let dstMinPathTo: Map<IATA, { distance: KM; path: IATA[] }> = new Map();
+
+    while (srcQueue.length > 0 && Date.now() < startTime + 1000) {
+      // Get the current airport from each queue
+      const srcItem = srcQueue.shift();
+      const dstItem = dstQueue.shift();
+      let lastBestResultDistance = Infinity;
+
+      // all graph covered
+      if (!srcItem || !dstItem) {
+        break;
+      }
+
+      /*
+      console.debug("Iterating through graph, queue size:", {
+        srcQueue: srcQueue.length,
+        dstQueue: dstQueue.length,
+        srcItem,
+        dstItem,
+      });
+      */
+
+      // makes no sense to continue paths if better result was already found
+      if (srcItem.distance <= lastBestResultDistance) {
+        // Visit the current airport from the source search
+        for (const [target, distance] of this.airports[srcItem.last]) {
+          const totalDistance = srcItem.distance + distance;
+
+          const route = {
+            last: target,
+            path: [...srcItem.path, target],
+            distance: totalDistance,
+          };
+
+          // src reached destination
+          if (target === destination.iata) {
+            results.push(route);
+            break;
+          }
+
+          // no more than 5 items in path based on requirements
+          if (route.path.length > 5) {
+            break;
+          }
+
+          // avoid loops
+          if (srcItem.path.includes(target)) {
+            continue;
+          }
+
+          // makes no sense to continue paths if better result was already found
+          if (totalDistance > lastBestResultDistance) {
+            continue;
+          }
+
+          // save visited areas in case we intersect with other search
+          if (!srcVisited.includes(target)) {
+            srcVisited.push(target);
+          }
+
+          // save most optimal reached areas
+          const exMinPath = srcMinPathTo.get(target);
+          if (exMinPath) {
+            if (exMinPath.distance > totalDistance) {
+              srcMinPathTo.set(target, route);
+            } else {
+              // we already were in this node before with more optimal path
+              // makes no sense to continue this search path
+              break;
+            }
+          }
+
+          // two-way search connected
+          if (dstVisited.includes(target) && dstMinPathTo.get(target)) {
+            // @ts-ignore
+            const resultDistance = totalDistance + dstMinPathTo.get(target).distance;
+
+            results.push({
+              path: [
+                ...srcItem.path,
+                target,
+                // @ts-ignore
+                dstMinPathTo.get(target).path.reverse(),
+              ],
+              distance: resultDistance,
+            });
+
+            if (resultDistance < lastBestResultDistance) {
+              lastBestResultDistance = resultDistance;
+            }
+
+            continue;
+          }
+
+          srcQueue.push(route);
+        }
+      }
+
+      if (dstItem.distance <= lastBestResultDistance) {
+        for (const [target, distance] of this.airports[dstItem.last]) {
+          const route = {
+            last: target,
+            path: [...dstItem.path, target],
+            distance: dstItem.distance + distance,
+          };
+
+          const totalDistance = dstItem.distance + distance;
+
+          // destination reached source
+          if (target === source.iata) {
+            results.push({
+              path: [...dstItem.path, target].reverse(),
+              distance: totalDistance,
+            });
+            break;
+          }
+
+          // no more than 5 items in path based on requirements
+          if (route.path.length > 5) {
+            break;
+          }
+
+          // avoid loops
+          if (dstItem.path.includes(target)) {
+            continue;
+          }
+
+          // makes no sense to continue paths if better result was already found
+          if (totalDistance > lastBestResultDistance) {
+            continue;
+          }
+
+          if (!dstVisited.includes(target)) {
+            dstVisited.push(target);
+          }
+
+          // save most optimal reached areas
+          const exMinPath = dstMinPathTo.get(target);
+          if (exMinPath) {
+            if (exMinPath.distance > totalDistance) {
+              dstMinPathTo.set(target, route);
+            } else {
+              // we already were in this node before with more optimal path
+              // makes no sense to continue this search path
+              break;
+            }
+          }
+
+          // two-way search connected
+          if (srcVisited.includes(target) && srcMinPathTo.get(target)) {
+            // @ts-ignore
+            const resultDistance = totalDistance + srcMinPathTo.get(target).distance;
+
+            results.push({
+              path: [
+                ...dstItem.path,
+                target,
+                // @ts-ignore
+                srcMinPathTo.get(target).path.reverse(),
+              ].reverse(),
+              distance: resultDistance,
+            });
+
+            if (resultDistance < lastBestResultDistance) {
+              lastBestResultDistance = resultDistance;
+            }
+
+            continue;
+          }
+
+          dstQueue.push(route);
+        }
+      }
+    }
+
+    let lowestDistance = Number.MAX_VALUE;
+    let lowestDistanceObject = null;
+
+    for (const result of results) {
+      if (result.distance < lowestDistance) {
+        lowestDistance = result.distance;
+        lowestDistanceObject = result;
+      }
+    }
+
+    if (lowestDistanceObject) {
+      return {
+        path: lowestDistanceObject.path,
+        distance: lowestDistanceObject.distance,
+        airports: lowestDistanceObject.path.map((iata) =>
+          getAirport(iata as IATA)
+        ),
+      };
+    }
+  }
 }
+
+const graph = new AirportGraph();
+
+console.log("Loading routes into memory...");
+for (const [srcIATA, dstIATA] of routes) {
+  if (srcIATA === dstIATA) {
+    continue;
+  }
+
+  const src = getAirport(srcIATA);
+  const dst = getAirport(dstIATA);
+  if (!src || !dst) {
+    continue;
+  }
+
+  graph.addRoute(srcIATA, dstIATA, getGeoDistance(src, dst));
+}
+
+export function getShortestRoute(source: Airport, target: Airport) {
+  return graph.search(source, target);
+}
+
+// Define a class to represent a graph of airports and routes

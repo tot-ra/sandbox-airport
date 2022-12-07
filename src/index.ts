@@ -1,9 +1,8 @@
 import fastify, { FastifyRequest } from 'fastify'
 import { getAirport } from './airports';
 import { getShortestRoute } from './route';
-import { precomputeDistances } from './flights';
 
-precomputeDistances();
+
 const server = fastify({logger: true})
 
 server.get("/route", async (request: any, reply: any) => {
@@ -23,11 +22,11 @@ server.get("/route", async (request: any, reply: any) => {
   }
   
   const route = getShortestRoute(originAirport, destinationAirport);
-  const totalDistance = route.reduce((partialSum, flight) => partialSum + flight.distance, 0)
+  //const totalDistance = route.reduce((partialSum, flight) => partialSum + flight.distance, 0)
 
   return {
     route,
-    totalDistance
+    url: `https://www.skyscanner.net/transport/flights/${from}/${to}`
   };
 });
 
