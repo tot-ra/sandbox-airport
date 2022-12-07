@@ -22,9 +22,12 @@ npm run test:coverage
 ### 🟢 GET /route
 
 Params:
-- `from` - IATA code for source airport
-- `to` - IATA code of target airport
-- `timeout` (optional) - max execution time. Min - 10ms, Default - 100ms, max - 10 sec. The higher timeout, the better is the precision.
+
+|param|description|
+|---|---|
+|`from`|IATA code for source airport|
+|`to`|IATA code of target airport|
+|`timeout`| (optional, integer, milliseconds) - max execution time. Min - 10ms, Default - 100ms, max - 10 sec. The higher timeout, the better is the precision.|
 
 Example:
 http://localhost:8080/route?from=TLL&to=JFK&timeout=10
