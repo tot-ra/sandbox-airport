@@ -1,6 +1,6 @@
 # airport-sandbox
-A graph search service. Uses airport and route data as nodes and edges.
-Uses two-way breadth-first 
+An airport / flight route search service. Uses public [airport](https://www.npmjs.com/package/airports-data/v/1.2.0) and [route](https://raw.githubusercontent.com/jpatokal/openflights/master/data/routes.dat) data as nodes and edges.
+Uses two-way graph breadth-first algorithm without recursion.
 
 ## Usage
 ```sh
