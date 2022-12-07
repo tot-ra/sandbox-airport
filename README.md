@@ -1,10 +1,21 @@
 # airport-sandbox
 A graph search service. Uses airport and route data as nodes and edges.
+Uses two-way breadth-first 
 
 ## Usage
 ```sh
 docker compose up
 open http://localhost:8080/route?from=TLL&to=JFK
+```
+
+## Development
+```sh
+npm run dev
+```
+
+## Testing
+```sh
+npm run test:coverage
 ```
 
 ## API
