@@ -1,10 +1,24 @@
 # airport-sandbox
+A graph search service. Uses airport and route data as nodes and edges.
 
 ## Usage
 ```sh
 docker compose up
-open http://localhost:8080/route?from=TLL&to=JFK&timeout=10
+open http://localhost:8080/route?from=TLL&to=JFK
 ```
+
+## API
+### 🟢 GET /route
+
+Params:
+- `from` - IATA code for source airport
+- `to` - IATA code of target airport
+- `timeout` (optional) - max execution time. Min - 10ms, Default - 100ms, max - 10 sec. The higher timeout, the better is the precision.
+
+Example:
+http://localhost:8080/route?from=TLL&to=JFK&timeout=10
+![Screenshot_20221207_124028](https://user-images.githubusercontent.com/445122/206157719-fa7e8b65-f68b-45fc-8dbb-72823caf5247.png)
+
 
 ## Requirements
 The task is to build a JSON over HTTP API endpoint that takes as input two IATA/ICAO airport codes and provides as output a route between these two airports so that:
